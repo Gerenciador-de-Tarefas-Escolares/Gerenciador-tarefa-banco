@@ -1,0 +1,31 @@
+# Sobe o PostgreSQL do Gerenciador de Tarefas Escolares já com as tabelas criadas.
+#
+#   1) cp .env.example .env
+#   2) docker compose up -d
+#
+# As credenciais vêm do arquivo .env (que NÃO vai para o GitHub).
+services:
+  banco:
+    image: postgres:16
+    container_name: gerenciador-banco
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NOME:-gerenciador_tarefas}
+      POSTGRES_USER: ${DB_USUARIO:?Defina DB_USUARIO no arquivo .env}
+      POSTGRES_PASSWORD: ${DB_SENHA:?Defina DB_SENHA no arquivo .env}
+    ports:
+      # porta da sua máquina : porta do container
+      - "${DB_PORTA:-5432}:5432"
+    volumes:
+      # os dados ficam guardados neste volume, mesmo se o container for apagado
+      - dados_postgres:/var/lib/postgresql/data
+      # scripts desta pasta rodam sozinhos, só na PRIMEIRA vez (banco vazio)
+      - ./01_criar_tabelas.sql:/docker-entrypoint-initdb.d/01_criar_tabelas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dados_postgres:
